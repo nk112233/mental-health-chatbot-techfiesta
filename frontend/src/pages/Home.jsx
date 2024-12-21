@@ -12,7 +12,7 @@ export default function Home() {
     useEffect(() => {
         const fetchHistory = async () => {
             try {
-                const response = await fetch(`https://chatbot-api-sage.vercel.app/chat-history`);
+                const response = await fetch(`https://mental-health-chatbot-api.vercel.app/chat-history`);
                 if (response.ok) {
                     const data = await response.json();
                     setMessages(data.history || []);
@@ -37,7 +37,7 @@ export default function Home() {
         setLoading(true);
 
         try {
-            const response = await fetch(`https://chatbot-api-sage.vercel.app/chat`, {
+            const response = await fetch(`https://mental-health-chatbot-api.vercel.app/chat`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -70,10 +70,10 @@ export default function Home() {
     // Clear chat history
     const clearChat = async () => {
         try {
-            const response = await fetch(`https://chatbot-api-sage.vercel.app/clear-chat`, { method: "POST" });
+            const response = await fetch(`https://mental-health-chatbot-api.vercel.app/clear-chat`, { method: "POST" });
             if (response.ok) {
                 // Fetch new history excluding the first two responses
-                const newHistoryResponse = await fetch(`https://chatbot-api-sage.vercel.app/chat-history`);
+                const newHistoryResponse = await fetch(`https://mental-health-chatbot-api.vercel.app/chat-history`);
                 if (newHistoryResponse.ok) {
                     const newHistoryData = await newHistoryResponse.json();
                     setMessages(newHistoryData.history || []);
