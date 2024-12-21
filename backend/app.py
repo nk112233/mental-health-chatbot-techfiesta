@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, session
 from groq import Groq
 import os
 import json
@@ -6,7 +6,10 @@ from flask_cors import CORS
 
 # Initialize Flask app and enable CORS
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
+
+# Set secret key for session encryption
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "supersecretkey")
 
 # Initialize Groq client
 api_key = os.environ.get("GROQ_API_KEY")
@@ -28,18 +31,12 @@ DEFAULT_CONVERSATION = [
     }
 ]
 
-COOKIE_NAME = "chat_history"
 
-
-def get_user_conversation(request):
-    """Retrieve conversation from the cookie, or return the default one."""
-    try:
-        conversation = request.cookies.get(COOKIE_NAME)
-        if conversation:
-            return json.loads(conversation)
-    except Exception as e:
-        print(f"Error loading conversation: {e}")
-    return DEFAULT_CONVERSATION[:]
+def get_user_conversation():
+    """Retrieve conversation from session, or return default."""
+    if 'conversation' not in session:
+        session['conversation'] = DEFAULT_CONVERSATION[:]
+    return session['conversation']
 
 
 @app.route('/chat', methods=['POST'])
@@ -51,8 +48,8 @@ def chat():
         if not user_message:
             return jsonify({"error": "Message is required"}), 400
 
-        # Retrieve user-specific conversation from the cookie
-        conversation_history = get_user_conversation(request)
+        # Retrieve user-specific conversation from the session
+        conversation_history = get_user_conversation()
 
         # Append the new user message to the conversation history
         conversation_history.append({"role": "user", "content": user_message})
@@ -69,11 +66,11 @@ def chat():
         # Append the assistant's response to the conversation history
         conversation_history.append({"role": "assistant", "content": response_content})
 
-        # Create a response and set the updated conversation in the cookie
-        response = make_response(jsonify({"content": response_content}))
-        response.set_cookie(COOKIE_NAME, json.dumps(conversation_history), httponly=True, max_age=60*60*24*7)
+        # Save the updated conversation to the session
+        session['conversation'] = conversation_history
+        session.modified = True
 
-        return response
+        return jsonify({"content": response_content})
 
     except Exception as e:
         print(f"Error: {str(e)}")
@@ -82,15 +79,15 @@ def chat():
 
 @app.route('/chat-history', methods=['GET'])
 def get_chat_history():
-    conversation = get_user_conversation(request)
-    return jsonify({"history": conversation[2:]})  # Skip the first two responses
+    conversation = get_user_conversation()
+    return jsonify({"history": conversation[2:]})
 
 
 @app.route('/clear-chat', methods=['POST'])
 def clear_chat():
-    response = make_response(jsonify({"status": "Chat history cleared for this user."}))
-    response.set_cookie(COOKIE_NAME, json.dumps(DEFAULT_CONVERSATION), httponly=True, max_age=60*60*24*7)
-    return response
+    session['conversation'] = DEFAULT_CONVERSATION[:]
+    session.modified = True
+    return jsonify({"status": "Chat history cleared for this user."})
 
 
 # if __name__ == '__main__':

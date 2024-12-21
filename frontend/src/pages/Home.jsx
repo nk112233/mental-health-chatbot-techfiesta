@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useState, useEffect, useRef } from "react";
 
 export default function Home() {
@@ -5,19 +6,20 @@ export default function Home() {
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
 
-    // Create a ref to track the first assistant message
     const firstAssistantMessageRef = useRef(null);
 
-    // Fetch the chat history when the component mounts
+    // Axios instance with credentials
+    const api = axios.create({
+        baseURL: "https://mental-health-chatbot-api.vercel.app",
+        withCredentials: true,  // Automatically send cookies
+    });
+
+    // Fetch chat history when the component mounts
     useEffect(() => {
         const fetchHistory = async () => {
             try {
-                const response = await fetch(`https://mental-health-chatbot-api.vercel.app/chat-history`);
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log(data.history);
-                    setMessages(data.history || []);
-                }
+                const response = await api.get("/chat-history");
+                setMessages(response.data.history || []);
             } catch (error) {
                 console.error("Error fetching chat history:", error);
             }
@@ -29,36 +31,20 @@ export default function Home() {
         if (!input.trim()) return;
 
         const userMessage = { role: "user", content: input };
-
-        // Add user's message to the chat
         setMessages((prevMessages) => [...prevMessages, userMessage]);
 
-        // Clear input field after message is sent
         setInput("");
         setLoading(true);
 
         try {
-            const response = await fetch(`https://mental-health-chatbot-api.vercel.app/chat`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ message: input }),
-            });
+            const response = await api.post("/chat", { message: input });
 
-            if (!response.ok) {
-                throw new Error(`Error: ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            // Add bot's response to the chat
             setMessages((prevMessages) => [
                 ...prevMessages,
-                { role: "assistant", content: data.content },
+                { role: "assistant", content: response.data.content },
             ]);
         } catch (error) {
-            console.error("Error:", error);
+            console.error("Error sending message:", error);
             setMessages((prevMessages) => [
                 ...prevMessages,
                 { role: "assistant", content: "Oops! Something went wrong. Please try again." },
@@ -68,20 +54,11 @@ export default function Home() {
         }
     };
 
-    // Clear chat history
     const clearChat = async () => {
         try {
-            const response = await fetch(`https://mental-health-chatbot-api.vercel.app/clear-chat`, { method: "POST" });
-            if (response.ok) {
-                // Fetch new history excluding the first two responses
-                const newHistoryResponse = await fetch(`https://mental-health-chatbot-api.vercel.app/chat-history`);
-                if (newHistoryResponse.ok) {
-                    const newHistoryData = await newHistoryResponse.json();
-                    setMessages(newHistoryData.history || []);
-                }
-            } else {
-                console.error("Failed to clear chat.");
-            }
+            await api.post("/clear-chat");
+            const newHistoryResponse = await api.get("/chat-history");
+            setMessages(newHistoryResponse.data.history || []);
         } catch (error) {
             console.error("Error clearing chat:", error);
         }
@@ -116,14 +93,12 @@ export default function Home() {
                                             ? "bg-blue-500 text-white"
                                             : "bg-gray-200"
                                     }`}
-                                    // Render content with newline characters as HTML
                                     dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, "<br />") }}
                                 />
                             </div>
                         ))
                     )}
 
-                    {/* Scroll to the first assistant message */}
                     {messages.find((msg) => msg.role === "assistant") && (
                         <div ref={firstAssistantMessageRef} />
                     )}
