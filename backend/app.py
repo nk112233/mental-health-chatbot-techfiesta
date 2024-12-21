@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 from groq import Groq
 import os
 from flask_cors import CORS
@@ -7,14 +7,18 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
+# Set secret key for session encryption
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "supersecretkey")
+
 # Initialize Groq client
 api_key = os.environ.get("GROQ_API_KEY")
 if not api_key:
     raise EnvironmentError("GROQ_API_KEY environment variable is not set.")
 client = Groq(api_key=api_key)
 
-# Store the conversation state globally (for demo purposes, use session or DB in production)
-conversation_history = [
+
+# Default initial conversation state
+DEFAULT_CONVERSATION = [
     {
         "role": "user",
         "content": "You are a chatbot designed to provide mental health support. "
@@ -22,9 +26,17 @@ conversation_history = [
     },
     {
         "role": "assistant",
-        "content": "Welcome! I'm here to listen and support you with your mental health concerns. My purpose is to provide a safe and non-judgmental space for you to express yourself, and I'm here to help you manage your mental well-being.\n\nPlease know that everything discussed in our chat is confidential and anonymous. I'm not a replacement for professional help, but I can offer guidance, resources, and support to help you feel more comfortable and empowered to take care of your mental health.\n\nWhat's been going on lately that's been worrying or stressing you out? Is there anything specific you'd like to talk about or share with me?"
+        "content": "Welcome! I'm here to listen and support you with your mental health concerns. "
+                   "Please feel free to share your thoughts, and I'll provide compassionate guidance."
     }
 ]
+
+
+def get_user_conversation():
+    if 'conversation' not in session:
+        session['conversation'] = DEFAULT_CONVERSATION[:]
+    return session['conversation']
+
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -34,6 +46,9 @@ def chat():
 
         if not user_message:
             return jsonify({"error": "Message is required"}), 400
+
+        # Retrieve user-specific conversation history
+        conversation_history = get_user_conversation()
 
         # Append the new user message to the conversation history
         conversation_history.append({"role": "user", "content": user_message})
@@ -50,6 +65,9 @@ def chat():
         # Append the assistant's response to the conversation history
         conversation_history.append({"role": "assistant", "content": response_content})
 
+        # Update session with the new conversation
+        session['conversation'] = conversation_history
+
         return jsonify({"content": response_content})
 
     except Exception as e:
@@ -57,19 +75,19 @@ def chat():
         return jsonify({"error": str(e)}), 500
 
 
-# Endpoint to get the current chat history (excluding the first two responses)
+# Endpoint to get the current chat history (excluding the initial system prompts)
 @app.route('/chat-history', methods=['GET'])
 def get_chat_history():
-    return jsonify({"history": conversation_history[2:]})  # Skip the first two responses
+    conversation = get_user_conversation()
+    return jsonify({"history": conversation[2:]})  # Skip the first two responses
 
 
-# Endpoint to clear the chat history, but keep the first two messages
+# Endpoint to clear the chat history but retain initial system messages
 @app.route('/clear-chat', methods=['POST'])
 def clear_chat():
-    global conversation_history
-    conversation_history = conversation_history[:2]  # Retain only the first two responses
-    return jsonify({"status": "Chat history cleared, first two responses retained."})
+    session['conversation'] = DEFAULT_CONVERSATION[:]
+    return jsonify({"status": "Chat history cleared for this user."})
 
 
 # if __name__ == '__main__':
-#     app.run()
+#     app.run(debug=True)
