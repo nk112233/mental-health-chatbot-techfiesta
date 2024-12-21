@@ -81,5 +81,5 @@ def clear_chat():
     return jsonify({"status": "Chat history cleared for this user."})
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# if __name__ == '__main__':
+#     app.run(debug=True)
