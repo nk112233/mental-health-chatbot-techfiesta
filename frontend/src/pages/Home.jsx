@@ -15,6 +15,7 @@ export default function Home() {
                 const response = await fetch(`https://mental-health-chatbot-api.vercel.app/chat-history`);
                 if (response.ok) {
                     const data = await response.json();
+                    console.log(data.history);
                     setMessages(data.history || []);
                 }
             } catch (error) {
