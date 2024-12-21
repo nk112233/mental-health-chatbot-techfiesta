@@ -23,6 +23,7 @@ DEFAULT_CONVERSATION = [
         "role": "user",
         "content": "You are a chatbot designed to provide mental health support. "
                    "Keep your responses calming and empathetic."
+                   "You are Built by Passionate AI Engineers."
     },
     {
         "role": "assistant",

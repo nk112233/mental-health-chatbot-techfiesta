@@ -11,27 +11,28 @@ export default function Home() {
     // Axios instance with credentials
     const api = axios.create({
         baseURL: "https://mental-health-chatbot-api.vercel.app",
-        withCredentials: true,  // Automatically send cookies
+        withCredentials: true,  // Automatically send cookies if needed
     });
 
-    // Fetch chat history when the component mounts
+    // Fetch chat history from localStorage
     useEffect(() => {
-        const fetchHistory = async () => {
-            try {
-                const response = await api.get("/chat-history");
-                setMessages(response.data.history || []);
-            } catch (error) {
-                console.error("Error fetching chat history:", error);
-            }
-        };
-        fetchHistory();
+        const storedMessages = JSON.parse(localStorage.getItem("chatHistory"));
+        if (storedMessages) {
+            setMessages(storedMessages);
+        }
     }, []);
 
     const sendMessage = async () => {
         if (!input.trim()) return;
 
         const userMessage = { role: "user", content: input };
-        setMessages((prevMessages) => [...prevMessages, userMessage]);
+
+        // Add user's message to the chat
+        setMessages((prevMessages) => {
+            const updatedMessages = [...prevMessages, userMessage];
+            localStorage.setItem("chatHistory", JSON.stringify(updatedMessages)); // Save to localStorage
+            return updatedMessages;
+        });
 
         setInput("");
         setLoading(true);
@@ -39,10 +40,12 @@ export default function Home() {
         try {
             const response = await api.post("/chat", { message: input });
 
-            setMessages((prevMessages) => [
-                ...prevMessages,
-                { role: "assistant", content: response.data.content },
-            ]);
+            const assistantMessage = { role: "assistant", content: response.data.content };
+            setMessages((prevMessages) => {
+                const updatedMessages = [...prevMessages, assistantMessage];
+                localStorage.setItem("chatHistory", JSON.stringify(updatedMessages)); // Save to localStorage
+                return updatedMessages;
+            });
         } catch (error) {
             console.error("Error sending message:", error);
             setMessages((prevMessages) => [
@@ -54,14 +57,9 @@ export default function Home() {
         }
     };
 
-    const clearChat = async () => {
-        try {
-            await api.post("/clear-chat");
-            const newHistoryResponse = await api.get("/chat-history");
-            setMessages(newHistoryResponse.data.history || []);
-        } catch (error) {
-            console.error("Error clearing chat:", error);
-        }
+    const clearChat = () => {
+        setMessages([]);
+        localStorage.removeItem("chatHistory"); // Clear chat history from localStorage
     };
 
     // Scroll to the first assistant message after each message update
