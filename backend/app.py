@@ -67,7 +67,7 @@ def chat():
 
         # Append the assistant's response to the conversation history
         response_content_bidu = '''
-        Act like a bidu bindast boy.{response_content}
+        Act like a bidu bindast guy.{response_content}
         '''.format(response_content = response_content)
         conversation_history.append({"role": "assistant", "content": response_content_bidu})
 
