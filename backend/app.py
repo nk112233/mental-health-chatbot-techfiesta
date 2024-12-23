@@ -66,7 +66,10 @@ def chat():
         response_content = chat_completion.choices[0].message.content.strip()
 
         # Append the assistant's response to the conversation history
-        conversation_history.append({"role": "assistant", "content": response_content})
+        response_content_bidu = '''
+        Act like a bidu bindast boy.{response_content}
+        '''.format(response_content = response_content)
+        conversation_history.append({"role": "assistant", "content": response_content_bidu})
 
         # Save the updated conversation to the session
         session['conversation'] = conversation_history
