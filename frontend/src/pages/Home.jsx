@@ -5,16 +5,15 @@ export default function Home() {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
-
     const firstAssistantMessageRef = useRef(null);
 
     // Axios instance with credentials
     const api = axios.create({
         baseURL: "https://mental-health-chatbot-api.vercel.app",
-        withCredentials: true,  // Automatically send cookies if needed
+        withCredentials: true,  // Keep this if cookies are required for API
     });
 
-    // Fetch chat history from localStorage
+    // Fetch chat history from localStorage on load
     useEffect(() => {
         const storedMessages = JSON.parse(localStorage.getItem("chatHistory"));
         if (storedMessages) {
@@ -22,30 +21,35 @@ export default function Home() {
         }
     }, []);
 
+    // Send message to Flask backend
     const sendMessage = async () => {
         if (!input.trim()) return;
 
         const userMessage = { role: "user", content: input };
+        const updatedMessages = [...messages, userMessage];
 
-        // Add user's message to the chat
-        setMessages((prevMessages) => {
-            const updatedMessages = [...prevMessages, userMessage];
-            localStorage.setItem("chatHistory", JSON.stringify(updatedMessages)); // Save to localStorage
-            return updatedMessages;
-        });
+        // Update frontend immediately
+        setMessages(updatedMessages);
+        localStorage.setItem("chatHistory", JSON.stringify(updatedMessages));
 
         setInput("");
         setLoading(true);
 
         try {
-            const response = await api.post("/chat", { message: input });
-
-            const assistantMessage = { role: "assistant", content: response.data.content };
-            setMessages((prevMessages) => {
-                const updatedMessages = [...prevMessages, assistantMessage];
-                localStorage.setItem("chatHistory", JSON.stringify(updatedMessages)); // Save to localStorage
-                return updatedMessages;
+            const response = await api.post("/chat", {
+                message: input,
+                history: updatedMessages.map((msg) => ({
+                    role: msg.role,
+                    parts: msg.content,  // Match Flask history format
+                })),
             });
+
+            // Append assistant's response
+            const assistantMessage = { role: "assistant", content: response.data.content };
+            const newHistory = [...updatedMessages, assistantMessage];
+
+            setMessages(newHistory);
+            localStorage.setItem("chatHistory", JSON.stringify(newHistory));
         } catch (error) {
             console.error("Error sending message:", error);
             setMessages((prevMessages) => [
@@ -57,12 +61,18 @@ export default function Home() {
         }
     };
 
-    const clearChat = () => {
-        setMessages([]);
-        localStorage.removeItem("chatHistory"); // Clear chat history from localStorage
+    // Clear chat history
+    const clearChat = async () => {
+        try {
+            await api.post("/clear-chat");  // Inform backend if necessary
+            setMessages([]);
+            localStorage.removeItem("chatHistory");
+        } catch (error) {
+            console.error("Failed to clear chat:", error);
+        }
     };
 
-    // Scroll to the first assistant message after each message update
+    // Scroll to the latest assistant message
     useEffect(() => {
         if (firstAssistantMessageRef.current) {
             firstAssistantMessageRef.current.scrollIntoView({ behavior: "smooth" });
@@ -96,7 +106,6 @@ export default function Home() {
                             </div>
                         ))
                     )}
-
                     {messages.find((msg) => msg.role === "assistant") && (
                         <div ref={firstAssistantMessageRef} />
                     )}
