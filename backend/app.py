@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify, session
-from groq import Groq
 import os
 import json
 from flask_cors import CORS
+import google.generativeai as genai
 
 # Initialize Flask app and enable CORS
 app = Flask(__name__)
@@ -11,11 +11,13 @@ CORS(app, supports_credentials=True)
 # Set secret key for session encryption
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "supersecretkey")
 
-# Initialize Groq client
-api_key = os.environ.get("GROQ_API_KEY")
+# Initialize Gemini client
+api_key = os.environ.get("GEMINI_API_KEY")
 if not api_key:
-    raise EnvironmentError("GROQ_API_KEY environment variable is not set.")
-client = Groq(api_key=api_key)
+    raise EnvironmentError("GEMINI_API_KEY environment variable is not set.")
+
+# Configure the Gemini client
+genai.configure(api_key=api_key)
 
 # Default initial conversation state
 DEFAULT_CONVERSATION = [
@@ -56,19 +58,20 @@ def chat():
         # Append the new user message to the conversation history
         conversation_history.append({"role": "user", "content": user_message})
 
-        # Process the conversation with Groq
-        chat_completion = client.chat.completions.create(
-            messages=conversation_history,
-            model="llama3-8b-8192"
+        # Prepare the input for Gemini
+        input_text = "\n".join([f"{msg['role']}: {msg['content']}" for msg in conversation_history])
+
+        # Generate response using Gemini
+        response = genai.generate_text(
+            model="gemini-pro",
+            prompt=input_text
         )
 
-        # Access the content directly from the message object
-        response_content = chat_completion.choices[0].message.content.strip()
+        # Extract response content
+        response_content = response.result.strip()
 
         # Append the assistant's response to the conversation history
-        response_content_bidu = '''
-        Act like a bidu bindast guy.{response_content}
-        '''.format(response_content = response_content)
+        response_content_bidu = f"Act like a bidu bindast guy. {response_content}"
         conversation_history.append({"role": "assistant", "content": response_content_bidu})
 
         # Save the updated conversation to the session
