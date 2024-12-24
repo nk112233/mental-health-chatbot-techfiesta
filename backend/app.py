@@ -18,6 +18,7 @@ if not api_key:
 
 # Configure the Gemini client
 genai.configure(api_key=api_key)
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 # Default initial conversation state
 DEFAULT_CONVERSATION = [
@@ -62,13 +63,10 @@ def chat():
         input_text = "\n".join([f"{msg['role']}: {msg['content']}" for msg in conversation_history])
 
         # Generate response using Gemini
-        response = genai.generate_text(
-            model="gemini-pro",
-            prompt=input_text
-        )
+        response = model.generate_content(input_text)
 
         # Extract response content
-        response_content = response.result.strip()
+        response_content = response.text.strip()
 
         # Append the assistant's response to the conversation history
         response_content_bidu = f"Act like a bidu bindast guy. {response_content}"
