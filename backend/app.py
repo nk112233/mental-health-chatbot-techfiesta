@@ -3,19 +3,14 @@ import os
 from flask_cors import CORS
 import google.generativeai as genai
 
-# Initialize Flask app and enable CORS
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
-
-# Set secret key for session encryption (not required now but keeping for future use)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "supersecretkey")
 
-# Initialize Gemini client
 api_key = os.environ.get("GEMINI_API_KEY")
 if not api_key:
     raise EnvironmentError("GEMINI_API_KEY environment variable is not set.")
 
-# Configure Gemini client
 genai.configure(api_key=api_key)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
@@ -29,19 +24,23 @@ def chat():
         if not user_message:
             return jsonify({"error": "Message is required"}), 400
 
-        # Start a new chat with provided history (if any)
-        chat = model.start_chat(history=chat_history)
-        
-        # Send the latest user message
+        # Prepare chat history for the Gemini model
+        formatted_history = [
+            {"role": "user", "parts": msg["parts"]} if msg["role"] == "user" else
+            {"role": "model", "parts": msg["parts"]}
+            for msg in chat_history
+        ]
+
+        chat = model.start_chat(history=formatted_history)
         response = chat.send_message(user_message)
 
-        # Append new messages to history
+        # Append user and assistant messages to history
         chat_history.append({"role": "user", "parts": user_message})
-        chat_history.append({"role": "model", "parts": response.text})
+        chat_history.append({"role": "assistant", "parts": response.text})
 
         return jsonify({
             "content": response.text,
-            "history": chat_history  # Return updated history for frontend to maintain
+            "history": chat_history  # Return updated history
         })
 
     except Exception as e:
@@ -50,7 +49,6 @@ def chat():
 
 @app.route('/clear-chat', methods=['POST'])
 def clear_chat():
-    # Clear chat simply by returning an empty history
     return jsonify({"status": "Chat history cleared.", "history": []})
 
 # if __name__ == '__main__':
