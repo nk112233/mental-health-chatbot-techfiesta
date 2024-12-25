@@ -2,7 +2,9 @@ import axios from "axios";
 import { useState, useEffect, useRef } from "react";
 
 export default function Home() {
-    const [messages, setMessages] = useState([]);
+    const [messages, setMessages] = useState([
+        { role: "assistant", content: "How can I help you today?" } // Initial assistant message
+    ]);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const firstAssistantMessageRef = useRef(null);
@@ -65,7 +67,7 @@ export default function Home() {
     const clearChat = async () => {
         try {
             await api.post("/clear-chat");  // Inform backend if necessary
-            setMessages([]);
+            setMessages([{ role: "assistant", content: "How can I help you today?" }]);
             localStorage.removeItem("chatHistory");
         } catch (error) {
             console.error("Failed to clear chat:", error);
