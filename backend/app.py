@@ -46,6 +46,9 @@ If a user expresses feelings of self-harm, suicidal ideation, or severe emotiona
 1. Respond immediately with empathy: “I’m really sorry you’re feeling this way. Your feelings are valid. Please remember you don’t have to go through this alone.”
 2. Encourage them to seek help: “Would you feel comfortable talking to someone you trust? I can also provide helpline information if you need it.”
 3. If necessary, provide resources (hotlines, mental health services).
+
+
+Act Like A Therapist and make sure your prompts are humanly and short and consize instead of blattering random things
 '''
 
 @app.route('/chat', methods=['POST'])
