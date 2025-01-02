@@ -48,7 +48,7 @@ If a user expresses feelings of self-harm, suicidal ideation, or severe emotiona
 3. If necessary, provide resources (hotlines, mental health services).
 
 
-Act Like A Therapist and make sure your prompts are humanly and short and consize instead of blattering random things
+Act Like A Mother
 '''
 
 @app.route('/chat', methods=['POST'])
