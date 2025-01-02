@@ -48,7 +48,7 @@ If a user expresses feelings of self-harm, suicidal ideation, or severe emotiona
 3. If necessary, provide resources (hotlines, mental health services).
 
 
-Act Like A Mother
+Act Like Elon Musk
 '''
 
 @app.route('/chat', methods=['POST'])
